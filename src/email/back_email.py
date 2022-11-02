@@ -6,6 +6,8 @@ import imaplib
 import email
 # to manipulate the files on the local desktop
 import os
+# to get D0
+import datetime as dt
 
 def createConnection(email, password, imapurl='imap.gmail.com'):
     '''
@@ -21,7 +23,7 @@ def createConnection(email, password, imapurl='imap.gmail.com'):
     # return created connection
     return connection
 
-def searchMail(connection, Subject=None, Date=None, From=None, To=None, BCC=None, savepath=''):
+def searchMail(connection, Date, savepath=''):
     '''
     INPUT: connection, filter criteria (one or more), savepath (optional)
     OUTPUT: List containing a string for every line of the message body
@@ -30,41 +32,26 @@ def searchMail(connection, Subject=None, Date=None, From=None, To=None, BCC=None
     If input contains valid savepath, attachments will be downloaded to savepath
     '''
     # Get mails considering only one filter
-    if Subject: result, msgnums = connection.search(None,f'(SUBJECT "{Subject}")')
-    elif Date: result, msgnums = connection.search(None,f'(DATE "{Date}")')
-    elif From: result, msgnums = connection.search(None,f'(FROM "{From}")')
-    elif To: result, msgnums = connection.search(None,f'(TO "{To}")')    
-    elif BCC: result, msgnums = connection.search(None,f'(BCC "{BCC}")')
-    else:
-        raise Exception('No filter criteria given')
+    try:
+        result, msgnums = connection.search(None,f'(DATE "{Date}")')
+    except:
+        raise Exception('Invalid input date')
     # Iterate through all mails returned from first search
     for msgnum in msgnums[0].split():
         # Get mail message
         result, raw_data = connection.fetch(msgnum, "(RFC822)")
         data = raw_data[0][1].decode('utf-8')
         message = email.message_from_string(data)
+        '''
         # Apply all filters to skip unwanted messages
         if Date and (Date not in message.get("Date")): continue
         if Subject and (Subject not in message.get("Subject")): continue
         if From and (From not in message.get("From")): continue
         if To and (To not in message.get("To")): continue
         if BCC and (BCC not in message.get("BCC")): continue
-        # Print data of filtered message
-        print(f'Message number: {msgnum}')
-        print(f'From: {message.get("From")}')
-        print(f'To: {message.get("To")}')
-        print(f'BCC: {message.get("BCC")}')
-        print(f'Date: {message.get("Date")}')
-        print(f'Subject: {message.get("Subject")}')
-        print("Content:")
-        # Create list that body content text/plain be appended
-        body_content = []
+        '''
         # Walk through the whole message
         for part in message.walk():
-            # If this part of the message is plain text, append to body_content
-            if part.get_content_type() == 'text/plain':
-                body_content.append(part.get_payload(decode=False))
-                print(part.get_payload(decode=False))
             # Skip useless message parts
             if part.get_content_maintype() == 'multipart':
                 continue
@@ -79,12 +66,23 @@ def searchMail(connection, Subject=None, Date=None, From=None, To=None, BCC=None
                 fp.write(part.get_payload(decode=True))
                 fp.close()
                 print(f'Downloaded "{fileName}" from email titled "{message.get("Subject")} at {savepath}"')
-        return body_content
 
 
 #USAGE EXAMPLE:
+
+# Get D0 date
+today = dt.date.today()
+print(f"Running for {today}")
+
+# Format date to use it in filepath
+formated_date = str(today).replace('-', '')
+
+# Format date to use as search parameter
+month_dict = {'1': 'Jan', '2': 'Fev', '3': 'Mar', '4': 'Apr', '5': 'May', '6': 'June', '7': 'July', '8': 'Aug','9': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
+search_date = f'{today.day} {today.month} {today.year}'
+
 # Connects to imap
 connection = createConnection(email_credential.email, email_credential.password)
+
 # Search mail with multiple criteria (Can be Subject, Date, From, To and BBC) (if input a savepath, attachments will be downloaded)
-mail = searchMail(connection, Subject='Price Position', Date='7 Apr 2022')
-print(mail)
+mail = searchMail(connection, Date='7 Oct 2022' ,savepath='H:/Teste/emailData/formated_date')
